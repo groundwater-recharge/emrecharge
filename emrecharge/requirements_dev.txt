@@ -1,0 +1,9 @@
+-e .
+build
+black
+isort
+pylint
+pytest
+pytest-cov
+pytest-watch
+twine
