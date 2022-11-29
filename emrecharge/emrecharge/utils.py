@@ -1,72 +1,11 @@
 import numpy as np
 import numpy.ma as ma
-import pandas as pd
 import skfmm
 from discretize import TensorMesh
 from scipy.optimize import lsq_linear
 from scipy.spatial import cKDTree as kdtree
 from SimPEG import utils
 from verde import distance_mask
-
-
-def find_locations_in_distance(xy_input, xy_output, distance=100.0):
-    """
-    Find indicies of locations of xy_output within a given separation distance
-    from locations of xy_input.
-
-    Parameters
-    ----------
-
-    xy_input: (*,2) array_like
-        Input locations.
-    xy_output: (*,2) array_like
-        Ouput Locations where the indicies of the locations are sought.
-    distance: float
-        Separation distance used as a threshold
-
-    Returns
-    -------
-    pts : (*,2) ndarray, float
-        Sought locations.
-    inds: (*,) ndarray, integer
-        Sought indicies.
-    """
-    tree = kdtree(xy_output)
-    out = tree.query_ball_point(xy_input, distance)
-    temp = np.unique(out)
-    inds = []
-    for ind in temp:
-        if ind != []:
-            inds.append(ind)
-    if len(inds) == 0:
-        return None, None
-    inds = np.unique(np.hstack(inds))
-    pts = xy_output[inds, :]
-    return pts, inds
-
-
-def find_closest_locations(xy_input, xy_output):
-    """
-    Find indicies of the closest locations of xy_output from from locations of xy_input.
-
-    Parameters
-    ----------
-
-    xy_input: (*,2) array_like
-        Input locations.
-    xy_output: (*,2) array_like
-        Ouput Locations where the indicies of the locations are sought.
-
-    Returns
-    -------
-    d : (*,) ndarray, float
-        Closest distance.
-    inds: (*,) ndarray, integer
-        Sought indicies.
-    """
-    tree = kdtree(xy_output)
-    d, inds = tree.query(xy_input)
-    return d, inds
 
 
 def inverse_distance_interpolation(
@@ -144,85 +83,6 @@ def inverse_distance_interpolation(
     values_idw = values_idw.reshape(X.shape)
     return x, y, values_idw
 
-
-# TODO:
-# Calcuate fraction for each lithologic unit
-# Need to simplify this use volume avearging
-def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
-    """
-    Compute fraction of lithology in AEM layers
-
-    Parameters
-    ----------
-
-    hz: (n_layer,) array_like
-        Thickness of the AEM layers
-    lith_data: pandas DataFrame including ['From', 'To', 'Code']
-        Lithology logs
-    unique_code: array_like
-        uniuqe lithology code; n_code = unique.size
-
-    Returns
-    -------
-    fraction : (n_layer, n_code) ndarray, float
-        Fractoin of each lithologic code (or unit)
-    """
-    n_code = unique_code.size
-    z_top = lith_data.From.values
-    z_bottom = lith_data.To.values
-    z = np.r_[z_top, z_bottom[-1]]
-    code = lith_data.Code.values
-    zmin = z_top.min()
-    zmax = z_bottom.max()
-    depth = np.r_[0.0, np.cumsum(hz)][:]
-    z_aem_top = depth[:-1]
-    z_aem_bottom = depth[1:]
-
-    # assume lithology log always start with zero depth
-    # TODO: at the moment, the bottom aem layer, which overlaps with a portion of the driller's log
-    # is ignored.
-    n_layer = (z_aem_bottom < zmax).sum()
-    fraction = np.ones((hz.size, n_code)) * np.nan
-
-    for i_layer in range(n_layer):
-        inds_in = np.argwhere(
-            np.logical_and(z >= z_aem_top[i_layer], z <= z_aem_bottom[i_layer])
-        ).flatten()
-        dx_aem = z_aem_bottom[i_layer] - z_aem_top[i_layer]
-        if inds_in.sum() != 0:
-            z_in = z[inds_in]
-            dx_in = np.diff(z_in)
-            code_in = code[inds_in[:-1]]
-            if i_layer == 0:
-                inds_bottom = inds_in[-1] + 1
-                inds = np.r_[inds_in, inds_bottom]
-                z_tmp = z[inds]
-                dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
-                dx = np.r_[dx_in, dx_bottom]
-                code_bottom = code[inds_bottom - 1]
-                code_tmp = np.r_[code_in, code_bottom]
-            else:
-                inds_bottom = inds_in[-1] + 1
-                inds_top = inds_in[0] - 1
-                inds = np.r_[inds_top, inds_in, inds_bottom]
-                z_tmp = z[inds]
-                dx_top = z[inds_top + 1] - z_aem_top[i_layer]
-                dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
-                dx = np.r_[dx_top, dx_in, dx_bottom]
-                code_bottom = code[inds_bottom - 1]
-                code_top = code[inds_top]
-                code_tmp = np.r_[code_top, code_in, code_bottom]
-        else:
-            inds_top = np.argmin(abs(z - z_aem_top[i_layer]))
-            inds_bottom = inds_top + 1
-            inds = np.r_[inds_top, inds_bottom]
-            z_tmp = z[inds]
-            dx = np.r_[dx_aem]
-            #     print (code[inds_top])
-            code_tmp = np.r_[code[inds_top]]
-        for i_code, unique_code_tmp in enumerate(unique_code):
-            fraction[i_layer, i_code] = dx[code_tmp == unique_code_tmp].sum() / dx_aem
-    return fraction
 
 
 def rock_physics_transform_rk_2018(
