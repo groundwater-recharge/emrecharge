@@ -8,7 +8,7 @@ class EMDataset():
     
     def __init__(self, csv_filename: str):
         self.filename = csv_filename;
-        self.df = pd.read_csv(self.filename)
+        self.df = pd.read_csv(self.filename, dtype={'LINE_NO': 'Int32', 'RECORD': 'Int32'}).sort_values('RECORD')
         
     @property
     def header(self):
@@ -29,7 +29,7 @@ class EMDataset():
         )
     
     @property
-    def lines(self):
+    def line(self):
         return self.df['LINE_NO'].values
     
     @property
@@ -52,6 +52,15 @@ class EMDataset():
     @property
     def xy(self):
         return self.df[['UTMX', 'UTMY']].values
+    
+    @property
+    def lines_xy(self):
+        lines = []
+        em_lines = dict()
+        for g, data in self.df[['LINE_NO','RECORD','UTMX', 'UTMY']].groupby('LINE_NO'):
+            lines.append(g)
+            em_lines[g] = data[['UTMX', 'UTMY', 'RECORD']].values
+        return lines, em_lines
     
     @property
     def num_layers(self):
