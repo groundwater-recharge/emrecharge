@@ -48,11 +48,11 @@ class EMDataset():
     @property
     def resistivity(self):
         return self.df[self.names.rho].values[:,:]
-    
+
     @property
     def xy(self):
         return self.df[['UTMX', 'UTMY']].values
-    
+
     @property
     def lines_xy(self):
         lines = []
@@ -66,3 +66,10 @@ class EMDataset():
     def num_layers(self):
         return self.hz.size
     
+    def get_resistivity_by_line(self, line_number: int):
+        records = self.df[self.df['LINE_NO'] == line_number][['UTMX','UTMY', *self.names.rho]]
+        values = records.values[:, :]
+        rho = values[:, 2:]
+        xy = values[:, :2]
+        delta = np.concatenate([[0],(np.diff(values[:, 0])**2 + np.diff(values[:, 1])**2)**.5])
+        return rho, delta, xy
