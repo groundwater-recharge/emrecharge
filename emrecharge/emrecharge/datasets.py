@@ -50,6 +50,10 @@ class EMDataset():
         return self.df[self.names.rho].values[:,:]
 
     @property
+    def num_soundings(self):
+        return self.df[self.names.rho].values[:,:].shape[0]
+
+    @property
     def xy(self):
         return self.df[['UTMX', 'UTMY']].values
 

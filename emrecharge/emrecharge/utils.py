@@ -2,7 +2,6 @@ import numpy as np
 import numpy.ma as ma
 import skfmm
 from discretize import TensorMesh
-from scipy.optimize import lsq_linear
 from scipy.spatial import cKDTree as kdtree
 from SimPEG import utils
 from verde import distance_mask
@@ -85,57 +84,6 @@ def inverse_distance_interpolation(
 
 
 
-def rock_physics_transform_rk_2018(
-    fraction_matrix,
-    resistivity,
-    n_bootstrap=10000,
-    bounds=None,
-    circuit_type="parallel",
-):
-    """
-    Solve a linear inverse problem to compute resistivity values of each lithologic unit
-    then bootstrap to generate resistivity distribution for each lithologic unit
-
-    Parameters
-    ----------
-
-    fraction_matrix: array_like
-        fraction of lithology in upscaled layers, size of the matrix is (n_layers x n_lithology)
-    resistivity: array_like
-        resistivity values in upscaled layers
-    n_bootstrap: optional, int
-        number of bootstrap iteration
-
-    Returns
-    -------
-
-    resistivity_for_lithology: array_like
-        bootstrapped resistivity values for each lithology, size of the matrix is (n_bootstrap, n_lithology)
-    """
-
-    if bounds is None:
-        bounds = (0, np.inf)
-    if circuit_type == "parallel":
-        conductivity_for_lithology = []
-        for ii in range(n_bootstrap):
-            n_sample = int(resistivity.size)
-            inds_rand = np.random.randint(0, high=resistivity.size - 1, size=n_sample)
-            d = 1.0 / resistivity[inds_rand].copy()
-            conductivity_for_lithology.append(
-                lsq_linear(fraction_matrix[inds_rand, :], d, bounds=(bounds))["x"]
-            )
-        resistivity_for_lithology = 1.0 / np.vstack(conductivity_for_lithology)
-    elif circuit_type == "series":
-        resistivity_for_lithology = []
-        for ii in range(n_bootstrap):
-            n_sample = int(resistivity.size)
-            inds_rand = np.random.randint(0, high=resistivity.size - 1, size=n_sample)
-            d = resistivity[inds_rand].copy()
-            resistivity_for_lithology.append(
-                lsq_linear(fraction_matrix[inds_rand, :], d, bounds=(bounds))["x"]
-            )
-        resistivity_for_lithology = np.vstack(resistivity_for_lithology)
-    return resistivity_for_lithology
 
 
 def classify_cf(cf, threshold):
