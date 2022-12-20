@@ -2,6 +2,8 @@ from collections import namedtuple
 from traitlets import HasTraits, TraitType
 from ipywidgets import Output
 import re
+import os
+import requests
 
 RegisteredWidget = namedtuple('RegisteredWidget', ['name','widget'])
 
@@ -59,7 +61,7 @@ def validate_upload_specifications(list_of_things_to_upload):
     expected_keys = ['local_filepath', 'name', 'description', 'content_type']
     for upload in list_of_things_to_upload:
         if not all(key in upload for key in expected_keys):
-            raise ValueError(f"missing key in {upload}")
+            raise ValueError(f"missing key in {upload} - expected all of {expected_keys}")
         if not os.path.exists(upload["local_filepath"]):
             raise ValueError(f"missing local file: {upload['local_filepath']}")
 
@@ -86,7 +88,6 @@ def upload_a_file(filepath: str, name: str, content_type: str):
     upload_info = r.json()
     
     # 2. Upload the file.
-    headers = {"Content-Range": "bytes 0-" + str(filesize - 1) + "/" + str(filesize)}
     r = requests.put(
         upload_info["url"],
         headers={
