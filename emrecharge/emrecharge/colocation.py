@@ -179,10 +179,11 @@ def generate_water_level_map(water_level_df: pd.DataFrame, em_data: EMDataset):
         nn_interpolator=f_int_wse
     )
 
-def compute_colocations(distance_threshold: int, em_data: EMDataset, df_lithology_collar: pd.DataFrame):
-    
-    xy_lithology = df_lithology_collar[['X', 'Y']].values
-    
+def compute_colocations(distance_threshold: int, em_data: EMDataset, df_lithology: pd.DataFrame):
+    lithology_group = df_lithology.groupby("WELL_ID")
+    df_lithology_collar = lithology_group[['UTMX', 'UTMY']].mean()
+    xy_lithology = df_lithology_collar[['UTMX', 'UTMY']].values
+
     # find the well locations that are within the distance_threshold of any em suruvey location
     xy_lithology_colocated, inds_driller = find_locations_in_distance(em_data.xy, xy_lithology, distance=distance_threshold)
 
@@ -194,17 +195,16 @@ def compute_colocations(distance_threshold: int, em_data: EMDataset, df_litholog
 
     # get the subset of co-located wells
     _, inds_lithology_colocated = find_closest_locations(xy_aem_colocated, xy_lithology)
-    df_lithology_collar_colocated = df_lithology_collar.loc[inds_lithology_colocated]
+    df_lithology_collar_colocated = df_lithology_collar.loc[df_lithology_collar.index[inds_lithology_colocated]]
 
     # get names of the colocated wells
-    well_names_colocated = df_lithology_collar_colocated['WellID'].values
+    well_names_colocated = df_lithology_collar_colocated.index.to_list()
 
     # there should always be the same number of co-ocated wells and survey locations
     assert inds_aem_colocated.size == inds_driller.size
-    
+
     n_colocated = inds_aem_colocated.size
     mean_separation_distance = d_aem_colocated.mean()
-    
     return dict(
         n_colocated=n_colocated,
         mean_separation_distance=mean_separation_distance,
