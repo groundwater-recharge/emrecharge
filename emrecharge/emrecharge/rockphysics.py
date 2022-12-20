@@ -56,7 +56,7 @@ def rock_physics_transform_rk_2018(
     return resistivity_for_lithology
 
 
-def compute_interval(df: pd.DataFrame):
+def compute_interval(df: pd.DataFrame, n_bootstrap=1000):
     fraction_matrix_above = df[df['gse_wse']>=df['top']][['f_fine', 'f_coarse']].values
     resistivity_above = df[df['gse_wse']>=df['top']]['rho_aem'].values
     resistivity_for_lithology_above = rock_physics_transform_rk_2018(
@@ -71,7 +71,7 @@ def compute_interval(df: pd.DataFrame):
     
     return resistivity_for_lithology_above, resistivity_for_lithology_below
     
-def compute_integral(df: pd.DataFrame):
+def compute_integral(df: pd.DataFrame, n_bootstrap=1000):
     def func(x):
         hz = x.bottom - x.top
         return 1./((1./x.rho_aem * hz).sum() / hz.sum())
@@ -94,12 +94,12 @@ def compute_integral(df: pd.DataFrame):
 
     fraction_matrix_above = np.c_[1-cf_int_above, cf_int_above]
     resistivity_for_lithology_above = rock_physics_transform_rk_2018(
-        fraction_matrix_above, rho_int_above, n_bootstrap=10000
+        fraction_matrix_above, rho_int_above, n_bootstrap=n_bootstrap
     )
 
     fraction_matrix_below = np.c_[1-cf_int_below, cf_int_below]
     resistivity_for_lithology_below = rock_physics_transform_rk_2018(
-        fraction_matrix_below, rho_int_below, n_bootstrap=10000
+        fraction_matrix_below, rho_int_below, n_bootstrap=n_bootstrap
     )
     
     return resistivity_for_lithology_above, resistivity_for_lithology_below
