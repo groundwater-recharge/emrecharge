@@ -2,7 +2,7 @@ from .datasets import EMDataset
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree as kdtree
-from scipy.interpolate import NearestNDInterpolator
+from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 from .utils import inverse_distance_interpolation
 
 def find_locations_in_distance(xy_input, xy_output, distance=100.0):
@@ -146,25 +146,41 @@ def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
 
 
 
-def generate_water_level_map(water_level_df: pd.DataFrame, em_data: EMDataset):
-    xy_wse = water_level_df[['X', 'Y']].values
-    wse = -water_level_df['TSZ'].values
+def generate_water_level_map(
+        water_level_df: pd.DataFrame,
+        em_data: EMDataset,
+        dx=500,
+        dy=500,
+        max_distance=1000,
+        k_nearest_points=200,
+        water_level_contour_df=None,
+    ):
+    xy_wse = water_level_df[['UTMX', 'UTMY']].values
+    wse = water_level_df['GSE_WSE'].values
+    lx = xy_wse[:,0].max() - xy_wse[:,0].min()
+    ly = xy_wse[:,1].max() - xy_wse[:,1].min()
+    x_pad = lx * 0.1
+    y_pad = ly * 0.1    
+    if water_level_contour_df is not None:
+        xy_wse_contour = water_level_contour_df[['UTMX', 'UTMY']].values
+        xy_wse = np.vstack((xy_wse, xy_wse_contour))
+        wse = np.r_[wse, water_level_contour_df['GSE_WSE'].values]
     
-    # nearest interpolation
+    # linear interpolation
     f_int_wse = NearestNDInterpolator(xy_wse, wse)
     wse_em = f_int_wse(em_data.xy)
 
     x, y, wse_idw = inverse_distance_interpolation(
         em_data.xy, wse_em, 
-        dx=500, dy=500,
-        max_distance=1000., k_nearest_points=200, power=0,
-        x_pad=2000, y_pad=2000,
+        dx=dx,
+        dy=dy,
+        max_distance=max_distance, 
+        k_nearest_points=k_nearest_points, 
+        power=0,
+        x_pad=x_pad, y_pad=y_pad,
     )
     
     X, Y = np.meshgrid(x, y)
-    # values_tmp = wse_idw[~wse_idw.mask]
-    # x_vec_tmp = X[~wse_idw.mask]
-    # y_vec_tmp = Y[~wse_idw.mask]
     
     df_water_table_grid = pd.DataFrame(data=np.c_[X.flatten(), Y.flatten(), wse_idw.data.flatten()], columns=['x', 'y', 'water_table'])
     
@@ -178,6 +194,7 @@ def generate_water_level_map(water_level_df: pd.DataFrame, em_data: EMDataset):
         df=df_water_table_grid,
         nn_interpolator=f_int_wse
     )
+
 
 def compute_colocations(distance_threshold: int, em_data: EMDataset, df_lithology: pd.DataFrame):
     lithology_group = df_lithology.groupby("WELL_ID")
