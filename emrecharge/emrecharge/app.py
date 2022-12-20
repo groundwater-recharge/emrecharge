@@ -1,6 +1,7 @@
 from collections import namedtuple
 from traitlets import HasTraits, TraitType
 from ipywidgets import Output
+import re
 
 RegisteredWidget = namedtuple('RegisteredWidget', ['name','widget'])
 
@@ -53,3 +54,91 @@ class AppState(HasTraits):
         with out:
             print("AppState Outlet:")
         return out
+
+def validate_upload_specifications(list_of_things_to_upload):
+    expected_keys = ['local_filepath', 'name', 'description', 'content_type']
+    for upload in list_of_things_to_upload:
+        if not all(key in upload for key in expected_keys):
+            raise ValueError(f"missing key in {upload}")
+        if not os.path.exists(upload["local_filepath"]):
+            raise ValueError(f"missing local file: {upload['local_filepath']}")
+
+def upload_a_file(filepath: str, name: str, content_type: str):
+    # 1. get a signed url to upload to
+    url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/upload'
+    filesize = os.stat(filepath).st_size
+    r = requests.post(
+        url,
+        headers={
+            "content-type": 'application/json',
+            "authorization": f"Bearer {os.environ['RECHARGE_API_TOKEN']}"
+        },
+        json = {
+        'filename': re.sub("[_/.]", '-', name),
+        'content_type': content_type,
+        'size': filesize
+    },
+    )
+    
+    if r.status_code >= 299:
+        raise ValueError(f"Error {r.status_code} - {r.text}")
+    
+    upload_info = r.json()
+    
+    # 2. Upload the file.
+    headers = {"Content-Range": "bytes 0-" + str(filesize - 1) + "/" + str(filesize)}
+    r = requests.put(
+        upload_info["url"],
+        headers={
+            "content-type": content_type,
+            "Content-Range": "bytes 0-" + str(filesize - 1) + "/" + str(filesize)
+        },
+        data=open(filepath, 'rb')
+    )
+    
+    if r.status_code > 299:
+        raise ValueError(f"Error {r.status_code} - {r.text}")
+    
+    return {"id": upload_info["id"], "size": filesize}
+    
+def add_exports_to_simulation(simulationId, list_of_exports):
+    url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/simulations/{simulationId}/exports'
+    r= requests.patch(
+        url,
+        headers={
+            "content-type": 'application/json',
+            "authorization": f"Bearer {os.environ['RECHARGE_API_TOKEN']}"
+        },
+        json={
+            "items": list_of_exports
+        }
+    )
+
+    if r.status_code >= 299:
+        raise ValueError(f"Error {r.status_code} - {r.text}")
+
+def upload_and_export_all(list_of_things_to_upload):
+    print(f"Uploading {len(list_of_things_to_upload)} outputs")
+    errors = []
+    exports_to_add = []
+    for upload in list_of_things_to_upload:
+        print(f"Uploading {upload['name']}...", end="", flush=True)
+        try:
+            upload_info = upload_a_file(upload["local_filepath"], upload["name"], upload["content_type"])
+            exports_to_add.append({**upload, **upload_info})
+            print("DONE")
+        except Exception as err:
+            print("ERROR!")
+            errors.append(err)
+    
+    print("File uploads completed!")
+    
+    if len(errors) > 0:
+        print(f"{len(errors)} errors encountered")
+        for n, err in enumerate(errors):
+            print(f"{n}: {err}")
+    
+    print("Upload success!")
+    print("Updating simulation...")    
+    add_exports_to_simulation(os.environ["SIMULATION_ID"], exports_to_add)
+    print("Update completed!")
