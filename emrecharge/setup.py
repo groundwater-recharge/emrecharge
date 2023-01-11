@@ -25,7 +25,7 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
     ],
     packages=setuptools.find_packages(include=['emrecharge']),
-    python_requires='>=3.8',
+    python_requires='>=3.6',
     install_requires=[
         "rasterio",
         "shapely",
