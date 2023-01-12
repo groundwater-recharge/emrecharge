@@ -8,7 +8,7 @@ import requests
 RegisteredWidget = namedtuple('RegisteredWidget', ['name','widget'])
 
 class AppState(HasTraits):
-    widgets: dict[str, any]
+    widgets: dict
     
     @property
     def traits(self):
