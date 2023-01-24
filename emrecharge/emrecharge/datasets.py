@@ -2,39 +2,32 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 
+from collections import namedtuple
+import numpy as np
+import pandas as pd
+import json
+
 class EMDataset():
     filename: str;
     df: pd.DataFrame;
     
-    def __init__(self, csv_filename: str):
+    def __init__(self, csv_filename: str, csv_filename_thickness: str):
         self.filename = csv_filename;
+        self.filename_thickness = csv_filename_thickness;
         self.df = pd.read_csv(self.filename, dtype={'LINE_NO': 'Int32', 'RECORD': 'Int32'}).sort_values('RECORD')
-        
+        self.df_thickness = pd.read_csv(self.filename_thickness)
+
     @property
     def header(self):
         return list(self.df.columns)
-    
-    @property
-    def columns(self):
-        return namedtuple("columns",["thk","rho"])(
-                np.array(self.header)[['THK' in h for h in self.header]],
-                np.array(self.header)[['RHO' in h for h in self.header]]
-        )
-    
-    @property
-    def names(self):
-        return namedtuple("names",["thk","rho"])(
-            self.columns.thk[:int(len(self.columns.thk)/2)],
-            self.columns.rho[:int(len(self.columns.thk)/2)+1]
-        )
-    
+
     @property
     def line(self):
-        return self.df['LINE_NO'].values
+        return self.df['LINE_NO'].values.to_numpy(dtype=int)
     
     @property
     def timestamps(self):
-        return self.df['TIMESTAMP'].values
+        return self.df['RECORD'].values.to_numpy(dtype=int)
     
     @property
     def topography(self):
@@ -42,16 +35,21 @@ class EMDataset():
     
     @property
     def hz(self):
-        hz = np.unique(self.df[self.names.thk].values)
+        hz = np.array(json.loads(self.df_thickness.THICKNESS[0]))
         return np.r_[hz, hz[-1]]
     
     @property
     def resistivity(self):
-        return self.df[self.names.rho].values[:,:]
+        if getattr(self, "_resistivity", None) is None:
+            resistivity = []
+            for string in self.df['MEASUREMENTS']:
+                resistivity.append(json.loads(string)['RHO'])
+            self._resistivity = np.vstack(resistivity)            
+        return self._resistivity
 
     @property
     def num_soundings(self):
-        return self.df[self.names.rho].values[:,:].shape[0]
+        return self.df.shape[0]
 
     @property
     def xy(self):
@@ -70,10 +68,10 @@ class EMDataset():
     def num_layers(self):
         return self.hz.size
     
-    def get_resistivity_by_line(self, line_number: int):
-        records = self.df[self.df['LINE_NO'] == line_number][['UTMX','UTMY', *self.names.rho]]
-        values = records.values[:, :]
-        rho = values[:, 2:]
-        xy = values[:, :2]
-        delta = np.concatenate([[0],(np.diff(values[:, 0])**2 + np.diff(values[:, 1])**2)**.5])
+    def get_resistivity_by_line(self, line_number: int):       
+        records = self.df[self.df['LINE_NO'] == line_number][['UTMX','UTMY']]
+        inds_line = self.df['LINE_NO'].values.to_numpy(dtype=int) == line_number
+        xy = records.values[:, :]
+        rho = self.resistivity[inds_line, :]
+        delta = np.concatenate([[0],(np.diff(xy[:, 0])**2 + np.diff(xy[:, 1])**2)**.5])
         return rho, delta, xy
