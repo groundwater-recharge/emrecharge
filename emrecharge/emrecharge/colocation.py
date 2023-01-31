@@ -115,8 +115,8 @@ def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
             code_in = code[inds_in[:-1]]
             if i_layer == 0:
                 inds_bottom = inds_in[-1] + 1
-                inds = np.r_[inds_in, inds_bottom]
-                z_tmp = z[inds]
+                # inds = np.r_[inds_in, inds_bottom]
+                # z_tmp = z[inds]
                 dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
                 dx = np.r_[dx_in, dx_bottom]
                 code_bottom = code[inds_bottom - 1]
@@ -124,8 +124,8 @@ def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
             else:
                 inds_bottom = inds_in[-1] + 1
                 inds_top = inds_in[0] - 1
-                inds = np.r_[inds_top, inds_in, inds_bottom]
-                z_tmp = z[inds]
+                # inds = np.r_[inds_top, inds_in, inds_bottom]
+                # z_tmp = z[inds]
                 dx_top = z[inds_top + 1] - z_aem_top[i_layer]
                 dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
                 dx = np.r_[dx_top, dx_in, dx_bottom]
@@ -135,8 +135,8 @@ def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
         else:
             inds_top = np.argmin(abs(z - z_aem_top[i_layer]))
             inds_bottom = inds_top + 1
-            inds = np.r_[inds_top, inds_bottom]
-            z_tmp = z[inds]
+            # inds = np.r_[inds_top, inds_bottom]
+            # z_tmp = z[inds]
             dx = np.r_[dx_aem]
             #     print (code[inds_top])
             code_tmp = np.r_[code[inds_top]]
