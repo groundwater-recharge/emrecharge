@@ -4,6 +4,8 @@ import pandas as pd
 from scipy.spatial import cKDTree as kdtree
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 from .utils import inverse_distance_interpolation
+from discretize import TensorMesh
+from discretize.utils import volume_average
 
 def find_locations_in_distance(xy_input, xy_output, distance=100.0):
     """
@@ -65,85 +67,45 @@ def find_closest_locations(xy_input, xy_output):
     return d, inds
 
 
-# TODO:
-# Calcuate fraction for each lithologic unit
-# Need to simplify this use volume avearging
-def compute_fraction_for_aem_layer(hz, lith_data, unique_code):
+def compute_fraction_for_aem_layer(hz, lith_data):
     """
-    Compute fraction of lithology in AEM layers
+        Compute fraction of lithology in AEM layers
 
-    Parameters
-    ----------
+        Parameters
+        ----------
 
-    hz: (n_layer,) array_like
-        Thickness of the AEM layers
-    lith_data: pandas DataFrame including ['From', 'To', 'Code']
-        Lithology logs
-    unique_code: array_like
-        uniuqe lithology code; n_code = unique.size
+        hz: (n_layer,) array_like
+            Thickness of the AEM layers
+        lith_data: pandas DataFrame including ['From', 'To', 'Code']
+            Lithology logs
 
-    Returns
-    -------
-    fraction : (n_layer, n_code) ndarray, float
-        Fractoin of each lithologic code (or unit)
+        Returns
+        -------
+        fraction : (n_layer, 2) ndarray, float
+            columns of fine and coarse fractions
     """
-    n_code = unique_code.size
     z_top = lith_data.From.values
     z_bottom = lith_data.To.values
     z = np.r_[z_top, z_bottom[-1]]
     code = lith_data.Code.values
     zmin = z_top.min()
     zmax = z_bottom.max()
-    depth = np.r_[0.0, np.cumsum(hz)][:]
+    depth = np.r_[0., np.cumsum(hz)][:]
     z_aem_top = depth[:-1]
     z_aem_bottom = depth[1:]
+    fraction = np.zeros((len(hz), 2), dtype=float) * np.nan
+    hz_lith = z_bottom - z_top
+    inds_active = np.logical_and(depth[:len(hz)]>=zmin, depth[:len(hz)]<=zmax)
+    hz_active = hz[inds_active]
 
-    # assume lithology log always start with zero depth
-    # TODO: at the moment, the bottom aem layer, which overlaps with a portion of the driller's log
-    # is ignored.
-    n_layer = (z_aem_bottom < zmax).sum()
-    fraction = np.ones((hz.size, n_code)) * np.nan
 
-    for i_layer in range(n_layer):
-        inds_in = np.argwhere(
-            np.logical_and(z >= z_aem_top[i_layer], z <= z_aem_bottom[i_layer])
-        ).flatten()
-        dx_aem = z_aem_bottom[i_layer] - z_aem_top[i_layer]
-        if inds_in.sum() != 0:
-            z_in = z[inds_in]
-            dx_in = np.diff(z_in)
-            code_in = code[inds_in[:-1]]
-            if i_layer == 0:
-                inds_bottom = inds_in[-1] + 1
-                # inds = np.r_[inds_in, inds_bottom]
-                # z_tmp = z[inds]
-                dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
-                dx = np.r_[dx_in, dx_bottom]
-                code_bottom = code[inds_bottom - 1]
-                code_tmp = np.r_[code_in, code_bottom]
-            else:
-                inds_bottom = inds_in[-1] + 1
-                inds_top = inds_in[0] - 1
-                # inds = np.r_[inds_top, inds_in, inds_bottom]
-                # z_tmp = z[inds]
-                dx_top = z[inds_top + 1] - z_aem_top[i_layer]
-                dx_bottom = z_aem_bottom[i_layer] - z[inds_bottom - 1]
-                dx = np.r_[dx_top, dx_in, dx_bottom]
-                code_bottom = code[inds_bottom - 1]
-                code_top = code[inds_top]
-                code_tmp = np.r_[code_top, code_in, code_bottom]
-        else:
-            inds_top = np.argmin(abs(z - z_aem_top[i_layer]))
-            inds_bottom = inds_top + 1
-            # inds = np.r_[inds_top, inds_bottom]
-            # z_tmp = z[inds]
-            dx = np.r_[dx_aem]
-            #     print (code[inds_top])
-            code_tmp = np.r_[code[inds_top]]
-        for i_code, unique_code_tmp in enumerate(unique_code):
-            fraction[i_layer, i_code] = dx[code_tmp == unique_code_tmp].sum() / dx_aem
+    mesh_1d_aem = TensorMesh([hz_active])
+    mesh_1d_lith = TensorMesh([hz_lith])
+    P = volume_average(mesh_1d_lith, mesh_1d_aem)
+    coarse_fraction_active = P @ lith_data['Code'].values
+    fraction[inds_active,1] = coarse_fraction_active
+    fraction[inds_active,0] = 1-coarse_fraction_active
     return fraction
-
 
 
 def generate_water_level_map(
