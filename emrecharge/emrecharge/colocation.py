@@ -116,27 +116,37 @@ def generate_water_level_map(
         max_distance=1000,
         k_nearest_points=200,
         water_level_contour_df=None,
+        constant_water_level=30.,
     ):
-    xy_wse = water_level_df[['UTMX', 'UTMY']].values
-    wse = water_level_df['GSE_WSE'].values
-    lx = xy_wse[:,0].max() - xy_wse[:,0].min()
-    ly = xy_wse[:,1].max() - xy_wse[:,1].min()
+
+    lx = em_data.xy[:,0].max() - em_data.xy[:,0].min()
+    ly = em_data.xy[:,1].max() - em_data.xy[:,1].min()
     x_pad = lx * 0.1
-    y_pad = ly * 0.1    
-    if water_level_contour_df is not None:
-        xy_wse_contour = water_level_contour_df[['UTMX', 'UTMY']].values
-        xy_wse = np.vstack((xy_wse, xy_wse_contour))
-        wse = np.r_[wse, water_level_contour_df['GSE_WSE'].values]
-    
-    # linear interpolation
-    f_int_wse = NearestNDInterpolator(xy_wse, wse)
-    wse_em = f_int_wse(em_data.xy)
+    y_pad = ly * 0.1
+
+    if water_level_df.shape[0]==0:
+        wse_em = np.ones(em_data.num_soundings, dtype=float) * constant_water_level
+        f_int_wse = NearestNDInterpolator(em_data.xy, wse_em)
+    else:
+        xy_wse = water_level_df[['UTMX', 'UTMY']].values
+        wse = water_level_df['GSE_WSE'].values
+
+        if water_level_contour_df is not None:
+            xy_wse_contour = water_level_contour_df[['UTMX', 'UTMY']].values
+            xy_wse = np.vstack((xy_wse, xy_wse_contour))
+            wse = np.r_[wse, water_level_contour_df['GSE_WSE'].values]
+
+        # linear interpolation
+        f_int_wse = NearestNDInterpolator(xy_wse, wse)
+        wse_em = f_int_wse(em_data.xy)
+
+
 
     x, y, wse_idw = inverse_distance_interpolation(
         em_data.xy, wse_em, 
         dx=dx,
         dy=dy,
-        max_distance=max_distance, 
+        max_dis00tance=max_distance, 
         k_nearest_points=k_nearest_points, 
         power=0,
         x_pad=x_pad, y_pad=y_pad,
