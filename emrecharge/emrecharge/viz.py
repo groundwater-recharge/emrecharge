@@ -1,7 +1,7 @@
 import warnings
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 import numpy as np
 import properties
 import scipy.sparse as sp
@@ -9,14 +9,14 @@ from discretize import TensorMesh
 from matplotlib.colors import LogNorm
 from scipy.spatial import cKDTree as kdtree
 from SimPEG import utils
-import warnings
+
 
 def setup_mpl():
     # https://matplotlib.org/stable/tutorials/introductory/customizing.html#the-default-matplotlibrc-file
-    mpl.rc('lines', linewidth=3)
-    mpl.rc('axes', titlesize=12)
-    mpl.rc('xtick', labelsize=10)
-    mpl.rc('ytick', labelsize=10)
+    mpl.rc("lines", linewidth=3)
+    mpl.rc("axes", titlesize=12)
+    mpl.rc("xtick", labelsize=10)
+    mpl.rc("ytick", labelsize=10)
 
 
 def set_mesh_1d(hz):
@@ -24,7 +24,6 @@ def set_mesh_1d(hz):
 
 
 class Stitched1DModel(properties.HasProperties):
-
     topography = properties.Array("topography (x, y, z)", dtype=float, shape=("*", "*"))
 
     physical_property = properties.Array("Physical property", dtype=float)
@@ -237,7 +236,6 @@ class Stitched1DModel(properties.HasProperties):
         nx=100,
         ny=100,
     ):
-
         xmin, xmax = self.topography[:, 0].min(), self.topography[:, 0].max()
         ymin, ymax = self.topography[:, 1].min(), self.topography[:, 1].max()
         zmin, zmax = self.topography[:, 2].min(), self.topography[:, 2].max()
@@ -280,7 +278,6 @@ class Stitched1DModel(properties.HasProperties):
         return self._P
 
     def get_interpolation_matrix(self, npts=20, epsilon=None):
-
         tree_2d = kdtree(self.topography[:, :2])
         xy = utils.ndgrid(self.mesh_3d.vectorCCx, self.mesh_3d.vectorCCy)
 
@@ -386,9 +383,11 @@ def generate_average_map(mesh, values, z_top, z_bottom, averaging_method="arithm
     return averaged_values
 
 
-def plot_layer_model(sig, mesh, xscale='log', ax=None, showlayers=False, xlim=None,**kwargs):
+def plot_layer_model(
+    sig, mesh, xscale="log", ax=None, showlayers=False, xlim=None, **kwargs
+):
     """
-        Plot Conductivity model for the layered earth model
+    Plot Conductivity model for the layered earth model
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -397,41 +396,52 @@ def plot_layer_model(sig, mesh, xscale='log', ax=None, showlayers=False, xlim=No
         sigma = np.repeat(sig, 2)
         z = []
         for i in range(n_sig):
-            z.append(np.r_[z_grid[i], z_grid[i+1]])
+            z.append(np.r_[z_grid[i], z_grid[i + 1]])
         z = np.hstack(z)
         if xlim == None:
-            sig_min = sig[~np.isnan(sig)].min()*0.5
-            sig_max = sig[~np.isnan(sig)].max()*2
+            sig_min = sig[~np.isnan(sig)].min() * 0.5
+            sig_max = sig[~np.isnan(sig)].max() * 2
         else:
             sig_min, sig_max = xlim
 
-        if xscale == 'linear' and sig.min() == 0.:
+        if xscale == "linear" and sig.min() == 0.0:
             if xlim == None:
-                sig_min = -sig[~np.isnan(sig)].max()*0.5
-                sig_max = sig[~np.isnan(sig)].max()*2
+                sig_min = -sig[~np.isnan(sig)].max() * 0.5
+                sig_max = sig[~np.isnan(sig)].max() * 2
 
-        if ax==None:
+        if ax == None:
             plt.xscale(xscale)
             plt.xlim(sig_min, sig_max)
             plt.ylim(z.min(), z.max())
-            plt.xlabel('Conductivity (S/m)', fontsize = 14)
-            plt.ylabel('Depth (m)', fontsize = 14)
-            plt.ylabel('Depth (m)', fontsize = 14)
+            plt.xlabel("Conductivity (S/m)", fontsize=14)
+            plt.ylabel("Depth (m)", fontsize=14)
+            plt.ylabel("Depth (m)", fontsize=14)
             if showlayers == True:
                 for locz in z_grid:
-                    plt.plot(np.linspace(sig_min, sig_max, 100), np.ones(100)*locz, 'b--', lw = 0.5)
-            return plt.plot(sigma, z, 'k-', **kwargs)
+                    plt.plot(
+                        np.linspace(sig_min, sig_max, 100),
+                        np.ones(100) * locz,
+                        "b--",
+                        lw=0.5,
+                    )
+            return plt.plot(sigma, z, "k-", **kwargs)
 
         else:
             ax.set_xscale(xscale)
             ax.set_xlim(sig_min, sig_max)
             ax.set_ylim(z.min(), z.max())
-            ax.set_xlabel('Conductivity (S/m)', fontsize = 14)
-            ax.set_ylabel('Depth (m)', fontsize = 14)
+            ax.set_xlabel("Conductivity (S/m)", fontsize=14)
+            ax.set_ylabel("Depth (m)", fontsize=14)
             if showlayers == True:
                 for locz in z_grid:
-                    ax.plot(np.linspace(sig_min, sig_max, 100), np.ones(100)*locz, 'b--', lw = 0.5)
-            return ax.plot(sigma, z, 'k-', **kwargs)
+                    ax.plot(
+                        np.linspace(sig_min, sig_max, 100),
+                        np.ones(100) * locz,
+                        "b--",
+                        lw=0.5,
+                    )
+            return ax.plot(sigma, z, "k-", **kwargs)
+
 
 def set_mesh_1d(hz):
     return TensorMesh([hz], x0=[0])
