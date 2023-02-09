@@ -26,6 +26,7 @@ def classify_cf(cf, threshold):
     binary_model[cf < threshold] = 0.0
     return binary_model
 
+
 # ==================================== RECHARGE METRICS ====================================#
 
 

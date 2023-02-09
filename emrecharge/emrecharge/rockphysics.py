@@ -1,7 +1,8 @@
-from scipy.optimize import lsq_linear
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
+from scipy.optimize import lsq_linear
+
 
 def rock_physics_transform_rk_2018(
     fraction_matrix,
@@ -57,34 +58,39 @@ def rock_physics_transform_rk_2018(
 
 
 def compute_interval(df: pd.DataFrame, n_bootstrap=1000):
-    fraction_matrix_above = df[df['gse_wse']>=df['top']][['f_fine', 'f_coarse']].values
-    resistivity_above = df[df['gse_wse']>=df['top']]['rho_aem'].values
+    fraction_matrix_above = df[df["gse_wse"] >= df["top"]][
+        ["f_fine", "f_coarse"]
+    ].values
+    resistivity_above = df[df["gse_wse"] >= df["top"]]["rho_aem"].values
     resistivity_for_lithology_above = rock_physics_transform_rk_2018(
         fraction_matrix_above, resistivity_above, n_bootstrap=n_bootstrap
     )
 
-    fraction_matrix_below = df[df['gse_wse']<=df['top']][['f_fine', 'f_coarse']].values
-    resistivity_below = df[df['gse_wse']<=df['top']]['rho_aem'].values
+    fraction_matrix_below = df[df["gse_wse"] <= df["top"]][
+        ["f_fine", "f_coarse"]
+    ].values
+    resistivity_below = df[df["gse_wse"] <= df["top"]]["rho_aem"].values
     resistivity_for_lithology_below = rock_physics_transform_rk_2018(
         fraction_matrix_below, resistivity_below, n_bootstrap=n_bootstrap
     )
-    
+
     return resistivity_for_lithology_above, resistivity_for_lithology_below
-    
+
+
 def compute_integral(df: pd.DataFrame, n_bootstrap=1000):
     def func(x):
         hz = x.bottom - x.top
-        return 1./((1./x.rho_aem * hz).sum() / hz.sum())
+        return 1.0 / ((1.0 / x.rho_aem * hz).sum() / hz.sum())
 
     def func_cf(x):
         hz = x.bottom - x.top
         return (x.f_coarse * hz).sum() / hz.sum()
 
-    df_above = df[df['bottom']<=df['gse_wse']]
-    group_above = df_above.groupby('well_names')
+    df_above = df[df["bottom"] <= df["gse_wse"]]
+    group_above = df_above.groupby("well_names")
 
-    df_below = df[df['bottom']>=df['gse_wse']]
-    group_below = df_below.groupby('well_names')
+    df_below = df[df["bottom"] >= df["gse_wse"]]
+    group_below = df_below.groupby("well_names")
 
     rho_int_above = group_above.apply(func).values
     rho_int_below = group_below.apply(func).values
@@ -92,24 +98,26 @@ def compute_integral(df: pd.DataFrame, n_bootstrap=1000):
     cf_int_above = group_above.apply(func_cf).values
     cf_int_below = group_below.apply(func_cf).values
 
-    fraction_matrix_above = np.c_[1-cf_int_above, cf_int_above]
+    fraction_matrix_above = np.c_[1 - cf_int_above, cf_int_above]
     resistivity_for_lithology_above = rock_physics_transform_rk_2018(
         fraction_matrix_above, rho_int_above, n_bootstrap=n_bootstrap
     )
 
-    fraction_matrix_below = np.c_[1-cf_int_below, cf_int_below]
+    fraction_matrix_below = np.c_[1 - cf_int_below, cf_int_below]
     resistivity_for_lithology_below = rock_physics_transform_rk_2018(
         fraction_matrix_below, rho_int_below, n_bootstrap=n_bootstrap
     )
-    
+
     return resistivity_for_lithology_above, resistivity_for_lithology_below
+
 
 def from_sigma_to_fraction(sigma, sigma_fine, sigma_coarse):
     sigma_bounded = sigma.copy()
-    sigma_bounded[sigma>=sigma_fine] = sigma_fine
-    sigma_bounded[sigma<=sigma_coarse] = sigma_coarse    
-    fraction_coarse = (sigma_fine-sigma_bounded) / (sigma_fine-sigma_coarse)
+    sigma_bounded[sigma >= sigma_fine] = sigma_fine
+    sigma_bounded[sigma <= sigma_coarse] = sigma_coarse
+    fraction_coarse = (sigma_fine - sigma_bounded) / (sigma_fine - sigma_coarse)
     return fraction_coarse
+
 
 """
     Compute and return mapping functions given percentiles and resistivity range
@@ -139,12 +147,16 @@ def from_sigma_to_fraction(sigma, sigma_fine, sigma_coarse):
     rho: resistivity value array corresponding to fractions
 
 """
-def compute_rho_to_cf_mappings(df_rock_physics, percentile_fines, percentile_coarses, rho_min, rho_max):
-    rho_fine_dominated_above = df_rock_physics['rho_fine_dominated_above'].values
-    rho_coarse_dominated_above = df_rock_physics['rho_coarse_dominated_above'].values
-    rho_fine_dominated_below = df_rock_physics['rho_fine_dominated_below'].values
-    rho_coarse_dominated_below = df_rock_physics['rho_coarse_dominated_below'].values
-    
+
+
+def compute_rho_to_cf_mappings(
+    df_rock_physics, percentile_fines, percentile_coarses, rho_min, rho_max
+):
+    rho_fine_dominated_above = df_rock_physics["rho_fine_dominated_above"].values
+    rho_coarse_dominated_above = df_rock_physics["rho_coarse_dominated_above"].values
+    rho_fine_dominated_below = df_rock_physics["rho_fine_dominated_below"].values
+    rho_coarse_dominated_below = df_rock_physics["rho_coarse_dominated_below"].values
+
     func_cf_aboves = []
     func_cf_belows = []
 
@@ -156,18 +168,26 @@ def compute_rho_to_cf_mappings(df_rock_physics, percentile_fines, percentile_coa
         rho_coarse_above = np.percentile(rho_coarse_dominated_above, percentile_coarse)
         rho_fine_below = np.percentile(rho_fine_dominated_below, percentile_fine)
         rho_coarse_below = np.percentile(rho_coarse_dominated_below, percentile_coarse)
-        sigma_above_fine, sigma_above_coarse = 1./rho_fine_above, 1./rho_coarse_above
-        sigma_below_fine, sigma_below_coarse = 1./rho_fine_below, 1./rho_coarse_below
-        f_tmp_above = from_sigma_to_fraction(1./rho_tmp, sigma_above_fine, sigma_above_coarse)
-        f_tmp_below = from_sigma_to_fraction(1./rho_tmp, sigma_below_fine, sigma_below_coarse)
+        sigma_above_fine, sigma_above_coarse = (
+            1.0 / rho_fine_above,
+            1.0 / rho_coarse_above,
+        )
+        sigma_below_fine, sigma_below_coarse = (
+            1.0 / rho_fine_below,
+            1.0 / rho_coarse_below,
+        )
+        f_tmp_above = from_sigma_to_fraction(
+            1.0 / rho_tmp, sigma_above_fine, sigma_above_coarse
+        )
+        f_tmp_below = from_sigma_to_fraction(
+            1.0 / rho_tmp, sigma_below_fine, sigma_below_coarse
+        )
         func_cf_above = interp1d(np.log10(rho_tmp), f_tmp_above)
         func_cf_below = interp1d(np.log10(rho_tmp), f_tmp_below)
-        
+
         func_cf_aboves.append(func_cf_above)
         func_cf_belows.append(func_cf_below)
-        
-    return dict(
-        func_cf_aboves=func_cf_aboves,
-        func_cf_belows=func_cf_belows,
-        rho=rho_tmp)
 
+    return dict(
+        func_cf_aboves=func_cf_aboves, func_cf_belows=func_cf_belows, rho=rho_tmp
+    )
