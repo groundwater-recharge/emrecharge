@@ -145,7 +145,7 @@ def generate_water_level_map(
         wse_em,
         dx=dx,
         dy=dy,
-        max_dis00tance=max_distance,
+        max_distance=max_distance,
         k_nearest_points=k_nearest_points,
         power=0,
         x_pad=x_pad,
