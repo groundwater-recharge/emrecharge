@@ -297,9 +297,8 @@ class Stitched1DModel(properties.HasProperties):
         mesh_1d = TensorMesh([np.r_[self.hz[:-1], 1e20]])
 
         z = self.P * self.topography[:, 2]
-        actinds_int = utils.surface2ind_topo(self.mesh_3d, np.c_[xy, z])
-        self._actinds = np.zeros(self.mesh_3d.n_cells, dtype=bool)
-        self._actinds[actinds_int] = True
+
+        self._actinds = utils.surface2ind_topo(self.mesh_3d, np.c_[xy, z])
 
         Z = np.empty(self.mesh_3d.vnC, dtype=float, order="F")
         Z = self.mesh_3d.gridCC[:, 2].reshape(
