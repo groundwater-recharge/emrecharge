@@ -46,6 +46,11 @@ class EMDataset:
                 resistivity.append(json.loads(string)["RHO"])
             self._resistivity = np.vstack(resistivity)
         return self._resistivity
+    
+    @property
+    def minmax(self):
+        flat = self.resistivity.flatten()
+        return np.min(flat), np.max(flat)
 
     @property
     def num_soundings(self):
