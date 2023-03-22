@@ -179,7 +179,7 @@ def compute_colocations(
     xy_lithology = df_lithology_collar[["UTMX", "UTMY"]].values
 
     # find the well locations that are within the distance_threshold of any em suruvey location
-    xy_lithology_colocated, inds_driller = find_locations_in_distance(
+    xy_lithology_colocated, inds_lithology_colocated = find_locations_in_distance(
         em_data.xy, xy_lithology, distance=distance_threshold
     )
 
@@ -192,7 +192,6 @@ def compute_colocations(
     xy_aem_colocated = em_data.xy[inds_aem_colocated, :]
 
     # get the subset of co-located wells
-    _, inds_lithology_colocated = find_closest_locations(xy_aem_colocated, xy_lithology)
     df_lithology_collar_colocated = df_lithology_collar.loc[
         df_lithology_collar.index[inds_lithology_colocated]
     ]
@@ -201,7 +200,7 @@ def compute_colocations(
     well_names_colocated = df_lithology_collar_colocated.index.to_list()
 
     # there should always be the same number of co-ocated wells and survey locations
-    assert inds_aem_colocated.size == inds_driller.size
+    assert inds_aem_colocated.size == inds_lithology_colocated.size
 
     n_colocated = inds_aem_colocated.size
     mean_separation_distance = d_aem_colocated.mean()
