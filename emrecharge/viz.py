@@ -15,8 +15,8 @@ def setup_mpl():
     # https://matplotlib.org/stable/tutorials/introductory/customizing.html#the-default-matplotlibrc-file
     mpl.rc("lines", linewidth=3)
     mpl.rc("axes", titlesize=12)
-    mpl.rc("xtick", labelsize=10)
-    mpl.rc("ytick", labelsize=10)
+    mpl.rc("xtick", labelsize=8)
+    mpl.rc("ytick", labelsize=8)
 
 
 def set_mesh_1d(hz):
@@ -413,9 +413,9 @@ def plot_layer_model(
             plt.xscale(xscale)
             plt.xlim(sig_min, sig_max)
             plt.ylim(z.min(), z.max())
-            plt.xlabel("Conductivity (S/m)", fontsize=14)
-            plt.ylabel("Depth (m)", fontsize=14)
-            plt.ylabel("Depth (m)", fontsize=14)
+            plt.xlabel("Conductivity (S/m)")
+            plt.ylabel("Depth (m)")
+            plt.ylabel("Depth (m)")
             if showlayers == True:
                 for locz in z_grid:
                     plt.plot(
@@ -430,8 +430,8 @@ def plot_layer_model(
             ax.set_xscale(xscale)
             ax.set_xlim(sig_min, sig_max)
             ax.set_ylim(z.min(), z.max())
-            ax.set_xlabel("Conductivity (S/m)", fontsize=14)
-            ax.set_ylabel("Depth (m)", fontsize=14)
+            ax.set_xlabel("Conductivity (S/m)")
+            ax.set_ylabel("Depth (m)")
             if showlayers == True:
                 for locz in z_grid:
                     ax.plot(
