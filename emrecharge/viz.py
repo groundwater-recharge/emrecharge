@@ -28,7 +28,7 @@ class Stitched1DModel(properties.HasProperties):
 
     physical_property = properties.Array("Physical property", dtype=float)
 
-    line = properties.Array("Line", dtype=float, default=None)
+    # line = properties.Array("Line", dtype=float, default=None)
 
     time_stamp = properties.Array("Time stamp", dtype=float, default=None)
 

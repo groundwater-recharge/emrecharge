@@ -194,3 +194,20 @@ def compute_rho_to_cf_mappings(
     #     func_cf_aboves=func_cf_aboves, func_cf_belows=func_cf_belows, rho=rho_tmp
     # )
     return dict(func_cf_aboves=func_cf_aboves, rho=rho_tmp)
+
+
+def compute_rho_to_cf_mappings_with_rho(
+    rho_fine_above, rho_coarse_above, rho_min, rho_max
+):
+    func_cf_aboves = []
+
+    rho_tmp = np.logspace(np.log10(rho_min), np.log10(rho_max), 500)
+    sigma_above_fine, sigma_above_coarse = (
+        1.0 / rho_fine_above,
+        1.0 / rho_coarse_above,
+    )
+    f_tmp_above = from_sigma_to_fraction(
+        1.0 / rho_tmp, sigma_above_fine, sigma_above_coarse
+    )
+    func_cf_above = interp1d(np.log10(rho_tmp), f_tmp_above)
+    return dict(func_cf_above=func_cf_above, rho=rho_tmp)
