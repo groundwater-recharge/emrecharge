@@ -201,3 +201,43 @@ def download_user_sediment_type_data(dataset, output_folder):
 
 def download_all_user_dataset_files(dataset, output_folder):    
     [download_user_dataset_file(k,v,output_folder) for k,v in dataset["files"].items()]
+
+
+def create_dataset(list_of_uploads, dataset_name, em_filename, wells_filename, survey_year=None, survey_season=None, survey_kind=None):
+    url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/datasets';
+    
+    data = dict(
+        name=dataset_name,
+        files={item['key']: item['id'] for item in list_of_uploads}
+    )
+    
+    if em_filename is not None:
+        data["original_em_filename"] = em_filename
+        if survey_year is None or survey_season is None or survey_kind is None:
+            raise ValueError(f"Error expected survey_year, survey_season, and survey_kind to be set")
+        data["survey_year"] = survey_year
+        data["survey_season"] = survey_season
+        data["survey_kind"] = survey_kind
+    
+    if wells_filename is not None:
+        data["original_sediment_type_filename"] = wells_filename        
+
+    r = requests.post(
+        url,
+        headers={
+            "content-type": "application/json",
+            "authorization": f"Bearer {os.environ['RECHARGE_API_TOKEN']}",
+        },
+        json=data,
+    )
+    
+    print(f"Posted {len(list_of_uploads)} files")
+
+    if r.status_code >= 299:
+        raise ValueError(f"Error {r.status_code} - {r.text}")
+        
+    dataset = r.json()
+
+    print(f'Dataset Created with ID: {dataset["id"]}')
+    
+    return dataset
