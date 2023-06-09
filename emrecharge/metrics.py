@@ -117,7 +117,8 @@ def run_fmm(binary_values, mesh_fmm, inds_source, vel_ratio=None):
         phi = np.ma.MaskedArray(phi, mask)
         phi[inds_source] = -1
         d = skfmm.distance(
-            phi.reshape(mesh_fmm.vnC, order="F").transpose((1, 0, 2)), dx=[dx, dy, dz],
+            phi.reshape(mesh_fmm.vnC, order="F").transpose((1, 0, 2)),
+            dx=[dx, dy, dz],
         )
         shortest_distance = d.transpose((1, 0, 2))[1:-1, 1:-1, -1].flatten(order="F")
 

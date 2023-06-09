@@ -1,12 +1,14 @@
 import geopandas as gpd
+import numpy as np
 import rasterio
 from rasterio.transform import Affine
 from shapely.geometry import LineString, Polygon
-import numpy as np
 
 
 # Get one of the contours from the plot.
-def create_gpd_dataframe_from_contours(cs, input_crs, output_crs, spatial_conversion, dx, dy):
+def create_gpd_dataframe_from_contours(
+    cs, input_crs, output_crs, spatial_conversion, dx, dy
+):
     geometry = []
     index = []
     i_count = 0
@@ -14,7 +16,7 @@ def create_gpd_dataframe_from_contours(cs, input_crs, output_crs, spatial_conver
         n = len(cnt.get_paths())
         for ii in range(n):
             vs = cnt.get_paths()[ii].vertices
-            vs = np.c_[vs[:,0]-dx/2, vs[:,1]-dy/2] / spatial_conversion
+            vs = np.c_[vs[:, 0] - dx / 2, vs[:, 1] - dy / 2] / spatial_conversion
             polygon_geom = LineString(vs)
             geometry.append(polygon_geom)
             index.append(i_count)

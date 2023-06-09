@@ -157,70 +157,85 @@ def upload_and_export_all(list_of_things_to_upload):
     add_exports_to_simulation(os.environ["SIMULATION_ID"], exports_to_add)
     print("Update completed!")
 
+
 def fetch_user_dataset(dataset_id):
     url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/datasets/{dataset_id}'
-    
+
     r = requests.get(
         url,
         headers={
-            "authorization": f"Bearer {os.environ['RECHARGE_API_TOKEN']}",            
-        }
+            "authorization": f"Bearer {os.environ['RECHARGE_API_TOKEN']}",
+        },
     )
-    
+
     if r.status_code >= 299:
         raise ValueError(f"Error {r.status_code} - {r.text}")
-    
+
     return r.json()
 
-    
-    
+
 def download_user_dataset_file(filename, file_info, output_folder):
     r = requests.get(file_info["url"])
 
     if r.status_code >= 299:
         raise ValueError(f"Error {r.status_code} - {r.text}")
 
-    if file_info['content_type'] == 'application/geo+json':
-        ext = 'geojson'
-    elif file_info['content_type'] == 'text/csv':
-        ext = 'csv'
+    if file_info["content_type"] == "application/geo+json":
+        ext = "geojson"
+    elif file_info["content_type"] == "text/csv":
+        ext = "csv"
     else:
-        ext = 'txt'
+        ext = "txt"
 
     filepath = os.path.join(output_folder, f"{filename}.{ext}")
     print(f"Writing {file_info['size']} bytes to {filename}.{ext}...")
     with open(filepath, "w") as f:
         f.write(r.text)
-    
+
+
 def download_user_sediment_type_data(dataset, output_folder):
     if dataset["files"]["sediment_type"] is None:
         raise ValueError(f"Error expected dataset to have sedmiment type data")
-    
-    download_user_dataset_file("sediment_type", dataset["files"]["sediment_type"], output_folder)
-    
 
-def download_all_user_dataset_files(dataset, output_folder):    
-    [download_user_dataset_file(k,v,output_folder) for k,v in dataset["files"].items()]
-
-
-def create_dataset(list_of_uploads, dataset_name, em_filename, wells_filename, survey_year=None, survey_season=None, survey_kind=None):
-    url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/datasets';
-    
-    data = dict(
-        name=dataset_name,
-        files={item['key']: item['id'] for item in list_of_uploads}
+    download_user_dataset_file(
+        "sediment_type", dataset["files"]["sediment_type"], output_folder
     )
-    
+
+
+def download_all_user_dataset_files(dataset, output_folder):
+    [
+        download_user_dataset_file(k, v, output_folder)
+        for k, v in dataset["files"].items()
+    ]
+
+
+def create_dataset(
+    list_of_uploads,
+    dataset_name,
+    em_filename,
+    wells_filename,
+    survey_year=None,
+    survey_season=None,
+    survey_kind=None,
+):
+    url = f'{os.environ["RECHARGE_API_ENDPOINT"]}/datasets'
+
+    data = dict(
+        name=dataset_name, files={item["key"]: item["id"] for item in list_of_uploads}
+    )
+
     if em_filename is not None:
         data["original_em_filename"] = em_filename
         if survey_year is None or survey_season is None or survey_kind is None:
-            raise ValueError(f"Error expected survey_year, survey_season, and survey_kind to be set")
+            raise ValueError(
+                f"Error expected survey_year, survey_season, and survey_kind to be set"
+            )
         data["survey_year"] = survey_year
         data["survey_season"] = survey_season
         data["survey_kind"] = survey_kind
-    
+
     if wells_filename is not None:
-        data["original_sediment_type_filename"] = wells_filename        
+        data["original_sediment_type_filename"] = wells_filename
 
     r = requests.post(
         url,
@@ -230,14 +245,14 @@ def create_dataset(list_of_uploads, dataset_name, em_filename, wells_filename, s
         },
         json=data,
     )
-    
+
     print(f"Posted {len(list_of_uploads)} files")
 
     if r.status_code >= 299:
         raise ValueError(f"Error {r.status_code} - {r.text}")
-        
+
     dataset = r.json()
 
     print(f'Dataset Created with ID: {dataset["id"]}')
-    
+
     return dataset
