@@ -49,6 +49,10 @@ class EMDataset:
         return self.df["DOI_STANDARD"].values * self.spatial_conversion
 
     @property
+    def data_fit(self):
+        return self.df["RESDATA"].values        
+
+    @property
     def hz(self):
         hz = np.array(json.loads(self.df_thickness.THICKNESS[0]))
         return np.r_[hz, hz[-1]] * self.spatial_conversion
