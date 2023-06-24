@@ -106,6 +106,7 @@ class EMDataset:
         xy = self.xy[inds_line, :]
         rho = self.resistivity[inds_line, :]
         doi = self.depth_of_investigtaion[inds_line]
+        data_fit = self.data_fit[inds_line]
         elevation = self.topography[inds_line, 2]
         start_x = xy[0, 0]
         end_x = xy[-1, 0]
@@ -116,12 +117,12 @@ class EMDataset:
         delta = np.concatenate(
             [[0], (np.diff(xy[:, 0]) ** 2 + np.diff(xy[:, 1]) ** 2) ** 0.5]
         )
-        return rho, delta, xy, elevation, doi
+        return rho, delta, xy, elevation, doi, data_fit
 
     def get_binned_resistivity_by_line(
         self, line_number: int, n_bins: int, maximum_depth: float
     ):
-        rho, delta, xy, elevation, doi = self.get_resistivity_by_line(line_number)
+        rho, delta, xy, elevation, doi, _ = self.get_resistivity_by_line(line_number)
         distance = np.cumsum(delta)
         d_max = distance.max()
         distance_bins = np.linspace(0, d_max, n_bins + 1)
