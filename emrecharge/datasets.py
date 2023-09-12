@@ -113,6 +113,9 @@ class EMDataset:
         if start_x > end_x:
             rho = rho[::-1, :]
             xy = xy[::-1, :]
+            elevation = elevation[::-1]
+            doi = doi[::-1]
+            data_fit = data_fit[::-1]
 
         delta = np.concatenate(
             [[0], (np.diff(xy[:, 0]) ** 2 + np.diff(xy[:, 1]) ** 2) ** 0.5]
